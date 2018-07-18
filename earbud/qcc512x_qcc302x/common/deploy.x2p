@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<project path="" locked="no">
+    <workspace path="../CF376_CF440/earbud.x2w"/>
+    <configurations defaultKit="kitres://{f4d02931-aa0f-4704-9a41-53bb220bb94e}">
+        <configuration name="deploy" kit="kitres://{f4d02931-aa0f-4704-9a41-53bb220bb94e}" options="deploy|default">
+            <devkitConfiguration>application</devkitConfiguration>
+            <devkitPath>../../../../../../../ADK_QCC512x_QCC302x_WIN_6.2.70</devkitPath>
+            <devkitGroup>kitres://{BBAC163C-41BE-4ce7-B236-236F15FF18CA}</devkitGroup>
+            <deployProject></deployProject>
+            <devkitRevision>1526562680</devkitRevision>
+            <property name="BUILD_TYPE">DEBUG</property>
+            <property name="DBG_CORE">app/p1</property>
+            <property name="DBS"></property>
+            <property name="DEBUGTRANSPORT"></property>
+            <property name="DEFS">AURA</property>
+            <property name="HW_VARIANT"></property>
+            <property name="INCPATHS">sdk://apps/include/*.h;include/adk/*.h</property>
+            <property name="LIBPATHS"></property>
+            <property name="LIBS"></property>
+            <property name="OUTPUT"></property>
+            <property name="OUTPUT_TYPE">EXECUTABLE</property>
+            <property name="PRESERVED_LIBS"></property>
+            <property name="PRIVATE_DEFS">AURA</property>
+            <property name="PRIVATE_INCPATHS">include/*.h</property>
+            <property name="STRIP_SYMBOLS">FALSE</property>
+            <property name="SW_VARIANT"></property>
+        </configuration>
+    </configurations>
+</project>

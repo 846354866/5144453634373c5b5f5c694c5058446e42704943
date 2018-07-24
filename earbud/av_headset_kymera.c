@@ -16,6 +16,9 @@
 #include <tws_packetiser.h>
 #include <vmal.h>
 
+#include <audio_plugin_common.h>
+#include <audio_config.h>
+
 #ifdef __QCC3400_APP__
 #include <audio_clock.h>
 #include <audio_power.h>
@@ -1216,14 +1219,39 @@ static void appKymeraHandleInternalScoStart(Sink audio_sink, hfp_wbs_codec_mask 
     Source sco_src = ChainGetOutput(chain, EPR_SCO_TO_AIR);
     Sink sco_sink = ChainGetInput(chain, EPR_SCO_FROM_AIR);
     Source audio_source = StreamSourceFromSink(audio_sink);
+#ifdef APP_TWS_T08
+#ifdef SOURCE_I2S /* mic data to i2s */
+	Source mic_src1 = StreamAudioSource(AUDIO_HARDWARE_I2S, appConfigMicAudioInstance(), AUDIO_CHANNEL_A);
+    Sink mic_sink1 = ChainGetInput(chain, EPR_SCO_MIC1);
+
+    Source mic_src1b = StreamAudioSource(AUDIO_HARDWARE_I2S, appConfigMicAudioInstance(), AUDIO_CHANNEL_B);
+	Sink mic_sink1b = ChainGetInput(chain, EPR_SCO_MIC2);
+	
+    Source speaker_src = ChainGetOutput(chain, EPR_SCO_SPEAKER);
+    Sink speaker_snk = StreamAudioSink(AUDIO_HARDWARE_CODEC, AUDIO_INSTANCE_0, appConfigLeftAudioChannel());
+#else /* source PDM */
+	Source mic_src1 = StreamAudioSource(AUDIO_HARDWARE_DIGITAL_MIC, appConfigMicAudioInstance(), AUDIO_CHANNEL_A);
+	SourceConfigure(mic_src1, STREAM_DIGITAL_MIC_CLOCK_RATE, 2000);
+	Sink mic_sink1 = ChainGetInput(chain, EPR_SCO_MIC1);
+
+    Source mic_src1b = StreamAudioSource(AUDIO_HARDWARE_DIGITAL_MIC, appConfigMicAudioInstance(), AUDIO_CHANNEL_B);
+	SourceConfigure(mic_src1b, STREAM_DIGITAL_MIC_CLOCK_RATE, 2000);
+	Sink mic_sink1b = ChainGetInput(chain, EPR_SCO_MIC2);
+	
+    Source speaker_src = ChainGetOutput(chain, EPR_SCO_SPEAKER);
+    Sink speaker_snk = StreamAudioSink(AUDIO_HARDWARE_CODEC, AUDIO_INSTANCE_0, appConfigLeftAudioChannel());
+#endif
+#else
     Source mic_src1 = StreamAudioSource(AUDIO_HARDWARE_CODEC, appConfigMicAudioInstance(), AUDIO_CHANNEL_A);
     Sink mic_sink1 = ChainGetInput(chain, EPR_SCO_MIC1);
 #ifdef HFP_USE_2MIC
     Source mic_src1b = StreamAudioSource(AUDIO_HARDWARE_CODEC, appConfigMicAudioInstance(), AUDIO_CHANNEL_B);
     Sink mic_sink1b = ChainGetInput(chain, EPR_SCO_MIC2);
 #endif
+
     Source speaker_src = ChainGetOutput(chain, EPR_SCO_SPEAKER);
     Sink speaker_snk = StreamAudioSink(AUDIO_HARDWARE_CODEC, AUDIO_INSTANCE_0, appConfigLeftAudioChannel());
+#endif
 
     /* Set AEC REF sample rate */
     Operator aec_op = ChainGetOperatorByRole(chain, OPR_SCO_AEC);
@@ -1274,7 +1302,47 @@ static void appKymeraHandleInternalScoStart(Sink audio_sink, hfp_wbs_codec_mask 
     }
 
     appKymeraConfigureOutputChainOperators(chain, rate, KICK_PERIOD_VOICE, 0, 0);
+#ifdef APP_TWS_T08
+#ifdef SOURCE_I2S
+	SourceConfigure(mic_src1, STREAM_I2S_SYNC_RATE, rate);
+	SourceConfigure(mic_src1, STREAM_AUDIO_SAMPLE_SIZE, 16);
 
+	SourceConfigure(mic_src1b, STREAM_I2S_SYNC_RATE, rate);
+	SourceConfigure(mic_src1b, STREAM_AUDIO_SAMPLE_SIZE, 16);
+	SourceSynchronise(mic_src1,mic_src1b);
+
+	SinkConfigure(speaker_snk, STREAM_CODEC_OUTPUT_RATE, rate);
+
+	/* Conect it all together */
+    StreamConnect(sco_src, audio_sink);
+    StreamConnect(audio_source, sco_sink);
+    StreamConnect(mic_src1, mic_sink1);
+	StreamConnect(mic_src1b, mic_sink1b);
+#else /* source PDM */
+	SourceConfigure(mic_src1, STREAM_DIGITAL_MIC_INPUT_RATE, rate);
+	SourceConfigure(mic_src1, STREAM_DIGITAL_MIC_INPUT_GAIN, appConfigMicGain());
+
+	SourceConfigure(mic_src1b, STREAM_DIGITAL_MIC_INPUT_RATE, rate);
+	SourceConfigure(mic_src1b, STREAM_DIGITAL_MIC_INPUT_GAIN, appConfigMicGain());
+	SourceSynchronise(mic_src1,mic_src1b);
+#ifdef DMIC_ERROR
+    audio_mic_params params = {0};
+    params.bias_config = BIAS_CONFIG_PIO;
+    params.pio = 20;
+    AudioPluginSetMicPio(params, 1);
+    params.pio = 21;
+    AudioPluginSetMicPio(params, 1);
+#endif
+    /*AudioConfigGetVaMicParams();*/
+	SinkConfigure(speaker_snk, STREAM_CODEC_OUTPUT_RATE, rate);
+
+	/* Conect it all together */
+    StreamConnect(sco_src, audio_sink);
+    StreamConnect(audio_source, sco_sink);
+    StreamConnect(mic_src1, mic_sink1);
+	StreamConnect(mic_src1b, mic_sink1b);
+#endif
+#else
     /* Set DAC and ADC sample rate */
     SourceConfigure(mic_src1, STREAM_CODEC_INPUT_RATE, rate);
     SourceConfigure(mic_src1, STREAM_CODEC_INPUT_GAIN, appConfigMicGain());
@@ -1294,6 +1362,7 @@ static void appKymeraHandleInternalScoStart(Sink audio_sink, hfp_wbs_codec_mask 
     StreamConnect(mic_src1, mic_sink1);
 #ifdef HFP_USE_2MIC
     StreamConnect(mic_src1b, mic_sink1b);
+#endif
 #endif
     StreamConnect(speaker_src, speaker_snk);
     ChainConnect(chain);
